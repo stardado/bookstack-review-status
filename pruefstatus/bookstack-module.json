@@ -1,0 +1,5 @@
+{
+    "name": "Prüfstatus",
+    "description": "Neue/geänderte Seiten sind 'ungeprüft', bis eine Person mit Prüfer-Rolle sie freigibt.",
+    "version": "1.0.0"
+}
