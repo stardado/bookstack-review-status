@@ -16,6 +16,8 @@ BookStack bringt keinen eingebauten Freigabe-Prozess mit – dieses Modul schlie
 - **Prüfer-Buttons** direkt in der Box: „Als geprüft markieren“ bzw. „Prüfung zurücksetzen“.
 - **Vier-Augen-Prinzip (optional):** Prüfer können Seiten, die sie selbst angelegt oder zuletzt bearbeitet haben, nicht freigeben.
 - **Manipulationsschutz:** Setzt ein Nicht-Prüfer den Status-Tag von Hand auf „geprüft“, wird das beim Speichern überschrieben.
+- **Button „Fehler?“ (optional):** Wer einen Fehler im Artikel entdeckt, kann ihn mit einem Klick melden. Der Button öffnet das
+  Mailprogramm mit einer vorbereiteten Nachricht (Artikel, Buch, Link, Prüfstatus und Fragen zum Ausfüllen) an eine feste Adresse.
 - **Übersicht offener Seiten** über die normale BookStack-Suche: `[Prüfstatus=ungeprüft]` (in der Box verlinkt).
 - **Audit-Log:** Freigaben und Zurücksetzungen erscheinen im Audit-Log von BookStack.
 - **Optional nur für bestimmte Bücher** (über einen Buch-Tag, z. B. `Prüfpflicht`).
@@ -107,6 +109,8 @@ Oben in [`pruefstatus/functions.php`](pruefstatus/functions.php):
 | `PRUEFSTATUS_TAG`, `…_TAG_VON`, `…_TAG_AM` | `Prüfstatus`, `Geprüft von`, `Geprüft am` | Namen der verwendeten Tags |
 | `PRUEFSTATUS_OFFEN`, `PRUEFSTATUS_OK` | `ungeprüft`, `geprüft` | Tag-Werte |
 | `PRUEFSTATUS_ZEITZONE` | `Europe/Berlin` | Zeitzone für „Geprüft am“ |
+| `PRUEFSTATUS_FEHLER_MAIL` | `''` | Empfängeradresse für den Button „Fehler?“. Leer = kein Button |
+| `PRUEFSTATUS_FEHLER_BETREFF`, `PRUEFSTATUS_FEHLER_TEXT` | siehe Datei | Betreff und Text der Fehlermeldung; Platzhalter `{titel}`, `{link}`, `{buch}`, `{status}`, `{name}` |
 
 Nach Änderungen an Tag-Namen oder -Werten passen bestehende Tags nicht mehr – am besten vor dem ersten Einsatz festlegen.
 
@@ -119,6 +123,7 @@ Nach Änderungen an Tag-Namen oder -Werten passen bestehende Tags nicht mehr –
 | Autor | geprüfte Seite erneut bearbeiten | wieder „ungeprüft“ |
 | Prüfer | **Prüfung zurücksetzen** | wieder „ungeprüft“, Eintrag im Audit-Log |
 | Prüfer | Link **Alle ungeprüften** | Suchergebnis aller offenen Seiten |
+| alle | Button **Fehler?** | Mailprogramm öffnet sich mit vorbereiteter Fehlermeldung an die konfigurierte Adresse |
 
 Bearbeitet ein Prüfer selbst eine Seite, bleibt ihr Status unverändert (fehlt er, wird „ungeprüft“ gesetzt).
 
@@ -146,6 +151,8 @@ Die gesetzten Tags bleiben an den Seiten erhalten und können bei Bedarf über *
 
 - Das Logical Theme System ist laut BookStack nur „semi-stabil“. Nach BookStack-Updates kurz prüfen, ob das Modul noch wie erwartet arbeitet.
 - Die Hinweis-Box erscheint nur in der normalen Seitenansicht, nicht in Exporten, Revisionsansichten oder auf einer als Startseite gesetzten Seite.
+- Der Button „Fehler?“ ist ein `mailto:`-Link. Er braucht ein eingerichtetes Mailprogramm auf dem Gerät der meldenden Person;
+  BookStack selbst verschickt dabei keine Mail. Die Empfängeradresse ist im Seitenquelltext sichtbar.
 - Änderungen über die BookStack-API werden genauso behandelt wie Änderungen im Editor.
 - Dies ist kein offizielles BookStack-Projekt.
 

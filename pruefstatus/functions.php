@@ -42,6 +42,35 @@ const PRUEFSTATUS_OFFEN = 'ungeprüft';
 const PRUEFSTATUS_OK = 'geprüft';
 const PRUEFSTATUS_ZEITZONE = 'Europe/Berlin';
 
+// Button "Fehler?" in der Hinweis-Box: öffnet das Mailprogramm mit vorbereiteter Fehlermeldung.
+// Leer lassen ('') = kein Button.
+const PRUEFSTATUS_FEHLER_MAIL = '';
+
+// Betreff und Text der Fehlermeldung. Platzhalter: {titel}, {link}, {buch}, {status}, {name}
+const PRUEFSTATUS_FEHLER_BETREFF = 'Fehler im Artikel: {titel}';
+const PRUEFSTATUS_FEHLER_TEXT = <<<'TEXT'
+Hallo,
+
+im folgenden Artikel ist mir etwas aufgefallen, das nicht stimmt:
+
+Artikel: {titel}
+Buch: {buch}
+Link: {link}
+Prüfstatus: {status}
+
+1. Was ist falsch oder unklar?
+
+
+2. An welcher Stelle? (Überschrift / Abschnitt)
+
+
+3. Wie wäre es richtig? (falls bekannt)
+
+
+Viele Grüße
+{name}
+TEXT;
+
 // =================== AB HIER NICHTS ÄNDERN ===================
 
 function pruefstatus_ist_pruefer(User $user): bool
@@ -80,6 +109,30 @@ function pruefstatus_lesen(Page $page): ?string
 function pruefstatus_tag_wert(Page $page, string $name): ?string
 {
     return $page->tags()->where('name', '=', $name)->value('value');
+}
+
+/** mailto-Link für den Button "Fehler?" oder null, wenn keine Adresse konfiguriert ist. */
+function pruefstatus_fehler_mailto(Page $page): ?string
+{
+    if (PRUEFSTATUS_FEHLER_MAIL === '') {
+        return null;
+    }
+
+    $user = user();
+    $werte = [
+        '{titel}'  => $page->name,
+        '{link}'   => $page->getUrl(),
+        '{buch}'   => $page->book?->name ?? '',
+        '{status}' => pruefstatus_lesen($page) ?? '',
+        '{name}'   => $user->isGuest() ? '' : $user->name,
+    ];
+
+    $betreff = strtr(PRUEFSTATUS_FEHLER_BETREFF, $werte);
+    $text = str_replace("\n", "\r\n", str_replace("\r\n", "\n", strtr(PRUEFSTATUS_FEHLER_TEXT, $werte)));
+
+    return 'mailto:' . PRUEFSTATUS_FEHLER_MAIL
+        . '?subject=' . rawurlencode($betreff)
+        . '&body=' . rawurlencode($text);
 }
 
 /** Setzt den Status-Tag (und bei "geprüft" Prüfer + Datum), andere Tags bleiben unberührt. */
