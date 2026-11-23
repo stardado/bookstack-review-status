@@ -43,10 +43,15 @@ const PRUEFSTATUS_OK = 'geprüft';
 const PRUEFSTATUS_ZEITZONE = 'Europe/Berlin';
 
 // Button "Fehler?" in der Hinweis-Box: öffnet das Mailprogramm mit vorbereiteter Fehlermeldung.
-// Leer lassen ('') = kein Button.
+// Feste Adresse für Fehlermeldungen. Leer lassen ('') und PRUEFSTATUS_FEHLER_AN_ERSTELLER = false = kein Button.
 const PRUEFSTATUS_FEHLER_MAIL = '';
 
-// Betreff und Text der Fehlermeldung. Platzhalter: {titel}, {link}, {buch}, {status}, {name}
+// true = Mail geht an den Ersteller der Seite, PRUEFSTATUS_FEHLER_MAIL steht in CC.
+//        Ohne bekannten Ersteller (z. B. gelöschter Benutzer) geht sie an PRUEFSTATUS_FEHLER_MAIL.
+// false = Mail geht nur an PRUEFSTATUS_FEHLER_MAIL.
+const PRUEFSTATUS_FEHLER_AN_ERSTELLER = false;
+
+// Betreff und Text der Fehlermeldung. Platzhalter: {titel}, {link}, {buch}, {status}, {name}, {ersteller}
 const PRUEFSTATUS_FEHLER_BETREFF = 'Fehler im Artikel: {titel}';
 const PRUEFSTATUS_FEHLER_TEXT = <<<'TEXT'
 Hallo,
@@ -111,27 +116,37 @@ function pruefstatus_tag_wert(Page $page, string $name): ?string
     return $page->tags()->where('name', '=', $name)->value('value');
 }
 
-/** mailto-Link für den Button "Fehler?" oder null, wenn keine Adresse konfiguriert ist. */
+/** mailto-Link für den Button "Fehler?" oder null, wenn es keinen Empfänger gibt. */
 function pruefstatus_fehler_mailto(Page $page): ?string
 {
-    if (PRUEFSTATUS_FEHLER_MAIL === '') {
+    $ersteller = PRUEFSTATUS_FEHLER_AN_ERSTELLER ? $page->createdBy : null;
+    $erstellerMail = ($ersteller && filter_var($ersteller->email, FILTER_VALIDATE_EMAIL)) ? $ersteller->email : '';
+
+    $an = $erstellerMail !== '' ? $erstellerMail : PRUEFSTATUS_FEHLER_MAIL;
+    $cc = ($erstellerMail !== '' && strcasecmp($erstellerMail, PRUEFSTATUS_FEHLER_MAIL) !== 0) ? PRUEFSTATUS_FEHLER_MAIL : '';
+    if ($an === '') {
         return null;
     }
 
     $user = user();
     $werte = [
-        '{titel}'  => $page->name,
-        '{link}'   => $page->getUrl(),
-        '{buch}'   => $page->book?->name ?? '',
-        '{status}' => pruefstatus_lesen($page) ?? '',
-        '{name}'   => $user->isGuest() ? '' : $user->name,
+        '{titel}'     => $page->name,
+        '{link}'      => $page->getUrl(),
+        '{buch}'      => $page->book?->name ?? '',
+        '{status}'    => pruefstatus_lesen($page) ?? '',
+        '{name}'      => $user->isGuest() ? '' : $user->name,
+        '{ersteller}' => $ersteller?->name ?? '',
     ];
 
     $betreff = strtr(PRUEFSTATUS_FEHLER_BETREFF, $werte);
     $text = str_replace("\n", "\r\n", str_replace("\r\n", "\n", strtr(PRUEFSTATUS_FEHLER_TEXT, $werte)));
 
-    return 'mailto:' . PRUEFSTATUS_FEHLER_MAIL
-        . '?subject=' . rawurlencode($betreff)
+    // "@" bleibt lesbar, manche Mailprogramme kommen mit "%40" in Adressen nicht zurecht
+    $adresse = fn (string $mail) => str_replace('%40', '@', rawurlencode($mail));
+
+    return 'mailto:' . $adresse($an)
+        . '?' . ($cc !== '' ? 'cc=' . $adresse($cc) . '&' : '')
+        . 'subject=' . rawurlencode($betreff)
         . '&body=' . rawurlencode($text);
 }
 
